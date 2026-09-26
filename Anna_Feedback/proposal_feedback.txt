@@ -1,0 +1,18 @@
+
+You will need to email me when you have changed your survey for me to post on Piazza.
+
+Disclaimer: in the process of constructing feedback, I recorded my audio and got AI to rephrase my feedback in a concise, clear manner so that I can mark faster + you get more detailed feedback. I did not run any of the assignments through AI.
+
+Course-specific ID
+Please make the course-specific ID the first question in your survey and mark it as required. This keeps the survey consistent with everyone else's and lets me track responses reliably.
+
+Travel distance and cost questions
+Your survey asks students to pick a range for how far they travel to UTM and for what a one-way trip costs them. Please ask for an exact number for each instead. Precise values for distance give you better data for your analysis. Ranges also throw away information you might need for your regression. Rating scales in the regression questions Research question 3 uses multiple linear regression, and three of your predictors are rated on a 1 to 5 scale. 
+
+These are how much you prefer public transit, how important travel cost is, and how important travel distance is. I recommend a 1 to 7 scale instead (a 1 to 10 scale would also work). A wider scale lets respondents express finer differences and gives your regression more variation to work with. 
+
+You can extend to strong preference, preference, somewhat prefer, and neutral instead of just strong preference, somewhat prefer, and neutral.
+
+(deducted 0.1 marks from the questionnaire portion)
+
+Grade: 0.9/1
