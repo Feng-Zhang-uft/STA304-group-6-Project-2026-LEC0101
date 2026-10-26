@@ -1,0 +1,526 @@
+---
+title: "Group6"
+format: pdf
+date: "2026-10-24"
+---
+```{r setup, include=FALSE}
+# Load the easystats packages.
+library(easystats)
+library(tidyverse)
+library(knitr)
+library(readxl)
+# Read the clean_data worksheet.
+input_file <- "STA304_Group6_Data_Cleaned.xlsx"
+output_dir <- file.path(dirname(input_file), "Part2_Results")
+survey_data <- readxl::read_excel(
+  input_file,
+  sheet = "clean_data"
+)
+# Define the numerical variables.
+commute_vars <- c(
+  "commute_time_min",
+  "commute_distance_km",
+  "commute_cost_cad"
+)
+rating_vars <- c(
+  "transit_preference_1to7",
+  "cost_importance_1to7",
+  "distance_importance_1to7"
+)
+mode_labels <- c("Public transit", "Driving", "Passenger/Carpooling",
+                 "Walking", "Taxi/Ride-hailing")
+vehicle_access_labels <- c("No access", "Vehicle access")
+required_vars <- c("studentID", "preferred_mode", "current_mode",
+                   "vehicle_access", commute_vars, rating_vars)
+missing_columns <- setdiff(required_vars, names(survey_data))
+if (length(missing_columns) > 0) {
+  stop("Missing columns: ", paste(missing_columns, collapse = ", "))
+}
+numeric_vars <- c(commute_vars, rating_vars)
+if (!all(vapply(survey_data[numeric_vars], is.numeric, logical(1)))) {
+  stop("Commute variables and rating variables must be numeric.")
+}
+analysis_data <- survey_data %>%
+  mutate(
+    preferred_mode_code = preferred_mode,
+    preferred_mode = factor(preferred_mode, levels = 1:5, labels = mode_labels),
+    current_mode = factor(current_mode, levels = 1:5, labels = mode_labels),
+    vehicle_access = factor(vehicle_access, levels = c(0, 1),
+                            labels = vehicle_access_labels)
+  )
+
+```
+The dataset contains `r nrow(survey_data)` responses and
+`r ncol(survey_data)` variables.
+There are `r sum(is.na(survey_data))` missing values in total.
+```{r checks, include=FALSE}
+# Inspect data types and missing values.
+str(survey_data)
+colSums(is.na(survey_data))
+```
+```{r commuting, echo=FALSE, results='asis'}
+# Calculate descriptive statistics using datawizard.
+commute_summary <- datawizard::describe_distribution(
+  survey_data,
+  select = commute_vars,
+  centrality = c("mean", "median")
+)
+# Omit the statistics excluded in the assignment example.
+commute_summary <- commute_summary[
+  , !names(commute_summary) %in%
+    c("Skewness", "Kurtosis", "n_Missing", "MAD")
+]
+# Apply readable variable labels.
+commute_labels <- c(
+  commute_time_min = "Commute time (minutes)",
+  commute_distance_km = "Commute distance (km)",
+  commute_cost_cad = "Commute cost (CAD)"
+)
+commute_summary$Variable <- unname(
+  commute_labels[as.character(commute_summary$Variable)]
+)
+# Display the summary table.
+insight::print_md(commute_summary, digits = 2)
+```
+The following items use ordinal scores from 1 to 7.
+Numerical summaries do not establish equal spacing between categories.
+```{r ratings, echo=FALSE, results='asis'}
+# Calculate descriptive statistics for the rating items.
+rating_summary <- datawizard::describe_distribution(
+  survey_data,
+  select = rating_vars,
+  centrality = c("mean", "median")
+)
+# Omit the statistics excluded in the assignment example.
+rating_summary <- rating_summary[
+  , !names(rating_summary) %in%
+    c("Skewness", "Kurtosis", "n_Missing", "MAD")
+]
+# Apply readable variable labels.
+rating_labels <- c(
+  transit_preference_1to7 = "Public transit preference (1-7)",
+  cost_importance_1to7 = "Importance of cost (1-7)",
+  distance_importance_1to7 = "Importance of distance (1-7)"
+)
+rating_summary$Variable <- unname(
+  rating_labels[as.character(rating_summary$Variable)]
+)
+# Display the summary table.
+insight::print_md(rating_summary, digits = 2)
+```
+
+## Categorical Frequencies
+
+```{r frequencies}
+categorical_vars <- c(
+  "preferred_mode", "current_mode", "vehicle_access",
+  "transit_preference_1to7", "cost_importance_1to7",
+  "distance_importance_1to7"
+)
+missing_columns <- setdiff(categorical_vars, names(survey_data))
+if (length(missing_columns) > 0) {
+  stop("Missing columns: ", paste(missing_columns, collapse = ", "))
+}
+validate_codes <- function(x, allowed, variable) {
+  invalid <- unique(x[!is.na(x) & !(x %in% allowed)])
+  if (length(invalid) > 0) {
+    stop(variable, " contains unexpected codes: ",
+         paste(invalid, collapse = ", "))
+  }
+}
+for (v in c("preferred_mode", "current_mode")) {
+  validate_codes(survey_data[[v]], 1:5, v)
+}
+validate_codes(survey_data$vehicle_access, c(0, 1), "vehicle_access")
+rating_vars <- c(
+  "transit_preference_1to7", "cost_importance_1to7",
+  "distance_importance_1to7"
+)
+for (v in rating_vars) {
+  validate_codes(survey_data[[v]], 1:7, v)
+}
+categorical_data <- survey_data
+categorical_data$preferred_mode <- factor(
+  survey_data$preferred_mode, levels = 1:5, labels = mode_labels
+)
+categorical_data$current_mode <- factor(
+  survey_data$current_mode, levels = 1:5, labels = mode_labels
+)
+categorical_data$vehicle_access <- factor(
+  survey_data$vehicle_access,
+  levels = c(0, 1),
+  labels = vehicle_access_labels
+)
+for (v in rating_vars) {
+  categorical_data[[v]] <- factor(
+    survey_data[[v]], levels = 1:7, ordered = TRUE
+  )
+}
+frequency_table <- function(x) {
+  counts <- table(x, useNA = "no")
+  valid_n <- sum(counts)
+  percentages <- if (valid_n > 0) {
+    round(100 * as.numeric(counts) / valid_n, 2)
+  } else {
+    rep(NA_real_, length(counts))
+  }
+  data.frame(
+    Category = names(counts),
+    Frequency = as.integer(counts),
+    Percentage = percentages,
+    Valid_n = rep(as.integer(valid_n), length(counts)),
+    Missing_n = rep(sum(is.na(x)), length(counts)),
+    row.names = NULL
+  )
+}
+frequency_tables <- setNames(
+  lapply(categorical_vars, function(v) frequency_table(categorical_data[[v]])),
+  categorical_vars
+)
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+for (v in categorical_vars) {
+  cat("\n---", v, "---\n")
+  print(frequency_tables[[v]], row.names = FALSE)
+  write.csv(
+    frequency_tables[[v]],
+    file.path(output_dir, paste0("Frequency_", v, ".csv")),
+    row.names = FALSE
+  )
+}
+combined_table <- do.call(rbind, lapply(categorical_vars, function(v) {
+  data.frame(Variable = v, frequency_tables[[v]], row.names = NULL)
+}))
+rownames(combined_table) <- NULL
+write.csv(combined_table,
+          file.path(output_dir, "Part2_All_Frequency_Tables.csv"),
+          row.names = FALSE)
+preferred <- frequency_tables$preferred_mode
+current <- frequency_tables$current_mode
+mode_comparison <- data.frame(
+  Transportation_mode = preferred$Category,
+  Preferred_n = preferred$Frequency,
+  Preferred_percentage = preferred$Percentage,
+  Current_n = current$Frequency,
+  Current_percentage = current$Percentage
+)
+cat("\n--- PREFERRED VS CURRENT TRANSPORTATION ---\n")
+print(mode_comparison, row.names = FALSE)
+write.csv(mode_comparison,
+          file.path(output_dir, "Part2_Preferred_vs_Current.csv"),
+          row.names = FALSE)
+variable_labels <- c(
+  preferred_mode = "preferred transportation mode",
+  current_mode = "current transportation mode",
+  vehicle_access = "private vehicle access",
+  transit_preference_1to7 = "public transit preference rating (1-7)",
+  cost_importance_1to7 = "travel cost importance rating (1-7)",
+  distance_importance_1to7 = "travel distance importance rating (1-7)"
+)
+describe_frequency <- function(v) {
+  tab <- frequency_tables[[v]]
+  if (sum(tab$Frequency) == 0) {
+    return(paste("No valid responses were available for", variable_labels[[v]]))
+  }
+  top <- tab[tab$Frequency == max(tab$Frequency), , drop = FALSE]
+  categories <- paste(sprintf('"%s"', top$Category), collapse = " and ")
+  if (nrow(top) == 1) {
+    sprintf(
+      "For %s, the most common response was %s, reported by %d respondents (%.2f%% of %d valid responses).",
+      variable_labels[[v]], categories, top$Frequency[1],
+      top$Percentage[1], top$Valid_n[1]
+    )
+  } else {
+    sprintf(
+      "For %s, the most common responses were %s, each reported by %d respondents (%.2f%% of %d valid responses).",
+      variable_labels[[v]], categories, top$Frequency[1],
+      top$Percentage[1], top$Valid_n[1]
+    )
+  }
+}
+interpretations <- vapply(categorical_vars, describe_frequency, character(1))
+writeLines(
+  c(
+    "PART 2: DESCRIPTIVE INTERPRETATIONS", "",
+    unname(interpretations), "",
+    "Vehicle access coding and grouping:",
+    paste(
+      "Vehicle access was coded as a binary variable",
+      "(0 = no private vehicle access; 1 = private vehicle access).",
+      "The grouping follows the cleaned dataset."
+    ),
+    paste(
+      "Drivers and passengers are grouped together because both have access",
+      "to a privately owned vehicle, whether as a driver or as a passenger."
+    ), "",
+    "Percentages use valid responses for each variable and are rounded to two decimal places."
+  ),
+  file.path(output_dir, "Part2_Interpretations.txt")
+)
+cat("\n--- DESCRIPTIVE INTERPRETATIONS ---\n")
+cat(paste(interpretations, collapse = "\n\n"), "\n")
+cat("\nPart 2 completed. Results saved to:\n", output_dir, "\n")
+```
+
+## Figures
+
+```{r figures}
+# Figure 1: Preferred transportation modes
+p_rq1 <- ggplot(analysis_data, aes(x = preferred_mode)) +
+  geom_bar(fill = "#4C78A8", width = 0.7) +
+  labs(
+    title = "Preferred Transportation Modes to UTM",
+    x = "Preferred transportation mode",
+    y = "Number of students"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 25, hjust = 1)
+  )
+p_rq1
+# Figure 2: Transit preference by vehicle access
+p_rq2 <- ggplot(
+  analysis_data,
+  aes(
+    x = vehicle_access,
+    y = transit_preference_1to7,
+    fill = vehicle_access
+  )
+) +
+  geom_boxplot(width = 0.55, alpha = 0.75) +
+  scale_fill_manual(values = c("#74A9CF", "#FCAE91")) +
+  scale_y_continuous(breaks = 1:7) +
+  labs(
+    title = "Public Transit Preference by Vehicle Access",
+    x = "Access to a private vehicle",
+    y = "Public transit preference rating (1-7)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "none")
+p_rq2
+# Figure 3A: Transit preference and commute time
+p_rq3_time <- ggplot(
+  analysis_data,
+  aes(x = commute_time_min, y = transit_preference_1to7)
+) +
+  geom_point(alpha = 0.5, colour = "#2C7FB8", size = 2) +
+  geom_smooth(method = "lm", se = TRUE, colour = "#D95F0E") +
+  scale_y_continuous(breaks = 1:7) +
+  labs(
+    title = "Transit Preference and Commute Time",
+    x = "One-way commuting time to UTM (minutes)",
+    y = "Public transit preference rating (1-7)"
+  ) +
+  theme_minimal(base_size = 12)
+p_rq3_time
+# Figure 3B: Transit preference and commute distance
+p_rq3_distance <- ggplot(
+  analysis_data,
+  aes(
+    x = commute_distance_km,
+    y = transit_preference_1to7
+  )
+) +
+  geom_point(
+    alpha = 0.5,
+    colour = "#8E7CC3",
+    size = 2
+  ) +
+  geom_smooth(
+    method = "lm",
+    se = TRUE,
+    colour = "#E066A3"
+  ) +
+  scale_y_continuous(breaks = 1:7) +
+  labs(
+    title = "Transit Preference and Commute Distance",
+    x = "One-way commuting distance to UTM (km)",
+    y = "Public transit preference rating (1-7)"
+  ) +
+  theme_minimal(base_size = 12)
+p_rq3_distance
+# Figure 3C: Transit preference and commute cost
+p_rq3_cost <- ggplot(
+  analysis_data,
+  aes(
+    x = commute_cost_cad,
+    y = transit_preference_1to7
+  )
+) +
+  geom_point(
+    alpha = 0.6,
+    colour = "black",
+    size = 2
+  ) +
+  geom_smooth(
+    method = "lm",
+    se = TRUE,
+    colour = "red"
+  ) +
+  scale_y_continuous(breaks = 1:7) +
+  labs(
+    title = "Transit Preference and Commute Cost",
+    x = "One-way commuting cost to UTM (CAD)",
+    y = "Public transit preference rating (1-7)"
+  ) +
+  theme_minimal(base_size = 12)
+p_rq3_cost
+```
+
+## Preferred and Current Transportation Comparison
+
+```{r mode-comparison}
+stopifnot(all(c("preferred_mode", "current_mode") %in% names(survey_data)))
+for (v in c("preferred_mode", "current_mode")) {
+  if (any(!is.na(survey_data[[v]]) & !(survey_data[[v]] %in% 1:5))) {
+    stop("Unexpected transportation mode code in ", v)
+  }
+}
+preferred_n <- table(factor(survey_data$preferred_mode, levels = 1:5))
+current_n <- table(factor(survey_data$current_mode, levels = 1:5))
+if (sum(preferred_n) == 0 || sum(current_n) == 0) {
+  stop("Both variables must contain valid responses.")
+}
+percentages <- rbind(
+  Preferred = 100 * as.numeric(preferred_n) / sum(preferred_n),
+  Current = 100 * as.numeric(current_n) / sum(current_n)
+)
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+pdf(file.path(output_dir, "Preferred_vs_Current_Transportation.pdf"),
+    width = 10, height = 6.25, useDingbats = FALSE)
+par(mar = c(5, 5, 5.2, 1.2), family = "sans", las = 1,
+    col.axis = "#475569", col.lab = "#334155", fg = "#CBD5E1",
+    mgp = c(3, 0.8, 0), xaxs = "i", yaxs = "i")
+upper <- max(60, ceiling(max(percentages) / 10) * 10 + 10)
+positions <- barplot(
+  percentages, beside = TRUE, plot = FALSE, space = c(0.12, 0.65)
+)
+plot.new()
+plot.window(xlim = c(0, max(positions) + 0.9), ylim = c(0, upper))
+abline(h = seq(0, upper, 10), col = "#E8EDF2", lwd = 1)
+barplot(percentages, beside = TRUE, add = TRUE,
+        space = c(0.12, 0.65), axes = FALSE, axisnames = FALSE,
+        col = c("#4C78A8", "#E69F45"), border = NA)
+axis(2, at = seq(0, upper, 10), labels = paste0(seq(0, upper, 10), "%"),
+     tick = FALSE, cex.axis = 0.9)
+axis(1, at = colMeans(positions),
+     labels = c("Public transit", "Driving", "Passenger /\nCarpooling", "Walking", "Taxi /\nRide-hailing"),
+     tick = FALSE, cex.axis = 0.85, line = 0.4)
+text(positions, percentages + 1.8,
+     labels = paste0(formatC(percentages, format = "f", digits = 2), "%"),
+     cex = 0.83, col = "#334155")
+mtext("Respondents (%)", side = 2, line = 3.5, las = 0, col = "#334155", cex = 0.9)
+mtext("Preferred vs. Current Transportation to UTM", side = 3, line = 3.4,
+      adj = 0, font = 2, col = "#172B4D", cex = 1.2)
+mtext(sprintf("Preferred: n = %d | Current: n = %d", sum(preferred_n), sum(current_n)),
+      side = 3, line = 2.1, adj = 0, col = "#64748B", cex = 0.85)
+legend("topright", legend = c("Preferred mode", "Current mode"),
+       fill = c("#4C78A8", "#E69F45"), border = NA,
+       bty = "n", horiz = TRUE, cex = 0.85, text.col = "#334155")
+dev.off()
+cat("Chart saved to:", normalizePath(output_dir), "\n")
+```
+
+## Statistical Analysis
+
+```{r statistical-analysis}
+# Summary statistics for quantitative variables 
+numeric_vars <- c("commute_time_min", "commute_distance_km", "commute_cost_cad",
+                 "transit_preference_1to7", "cost_importance_1to7",
+                 "distance_importance_1to7")
+quant_summary <- datawizard::describe_distribution(
+  analysis_data, select = numeric_vars, centrality = c("mean", "median")
+) |>
+  select(-any_of(c("Skewness", "Kurtosis", "n_Missing", "MAD")))
+print(knitr::kable(quant_summary, caption = "Quantitative variable summaries"))
+# Frequency tables - qualitative variables
+print(datawizard::data_tabulate(
+  analysis_data, c("preferred_mode", "current_mode", "vehicle_access")
+))
+# RQ1: What modes of transportation do STA304H5 students prefer when commuting to campus? 
+rq1_counts <- analysis_data %>%
+  count(preferred_mode, .drop = FALSE) %>%
+  mutate(percentage = round(100 * n / sum(n), 2))
+print(knitr::kable(rq1_counts, caption = "Preferred transportation modes"))
+p_rq1_basic <- ggplot(analysis_data, aes(x = preferred_mode)) +
+  geom_bar() +
+  labs(title = "Preferred Transportation Modes Among STA304H5 Students",
+       x = "Preferred Transportation Mode", y = "Number of Students") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+print(p_rq1_basic)
+# One-sample proportion test: public transit = preferred_mode code 1.
+# H0: p = 0.50; HA: p != 0.50; alpha = 0.05.
+rq1_transit_n <- sum(analysis_data$preferred_mode_code == 1, na.rm = TRUE)
+rq1_valid_n <- sum(!is.na(analysis_data$preferred_mode_code))
+rq1_proportion <- rq1_transit_n / rq1_valid_n
+cat("RQ1: public transit count =", rq1_transit_n, "; valid n =", rq1_valid_n,
+    "; sample proportion =", round(rq1_proportion, 4), "\n")
+rq1_test <- prop.test(x = rq1_transit_n, n = rq1_valid_n, p = 0.5,
+                      alternative = "two.sided", correct = FALSE)
+print(rq1_test)
+# Extract statistical results, report::report(rq1_test) does not support proportion test
+rq1_test$estimate
+rq1_test$statistic
+rq1_test$parameter
+rq1_test$p.value
+rq1_test$conf.int
+# RQ2: Does mean transit preference differ by vehicle access?
+rq2_group_stats <- analysis_data %>%
+  group_by(vehicle_access) %>%
+  summarise(n = sum(!is.na(transit_preference_1to7)),
+            mean = mean(transit_preference_1to7, na.rm = TRUE),
+            median = median(transit_preference_1to7, na.rm = TRUE),
+            sd = sd(transit_preference_1to7, na.rm = TRUE),
+            IQR = IQR(transit_preference_1to7, na.rm = TRUE),
+            .groups = "drop")
+print(knitr::kable(rq2_group_stats, digits = 2))
+boxplot(transit_preference_1to7 ~ vehicle_access, data = analysis_data,
+        main = "Public Transit Preference by Vehicle Access",
+        xlab = "Access to a Private Vehicle",
+        ylab = "Public Transit Preference Rating (1-7)")
+p_rq2_qq <- ggplot(analysis_data, aes(sample = transit_preference_1to7)) +
+  stat_qq() + stat_qq_line() +
+  facet_wrap(~ vehicle_access) +
+  labs(title = "Q-Q Plots of Transit Preference by Vehicle Access",
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +
+  theme_minimal()
+print(p_rq2_qq)
+# Exploratory diagnostic plots for a two-group linear model.
+rq2_model <- lm(transit_preference_1to7 ~ vehicle_access, data = analysis_data)
+print(performance::check_model(rq2_model,
+                               check = c("qq", "normality", "linearity", "homogeneity")))
+# Welch's t-test allows different variances in the two groups.
+# H0: mean(No access) = mean(Vehicle access)
+rq2_test <- t.test(transit_preference_1to7 ~ vehicle_access,
+                   data = analysis_data, alternative = "two.sided")
+rq2_test
+report::report(rq2_test)
+# RQ3: How are factors such as commute cost, commute time, and commute distance 
+# associated with students’ influence on public transportation preference?
+p_rq3_time_basic <- ggplot(analysis_data, aes(x = commute_time_min,
+                       y = transit_preference_1to7)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(title = "Transit Preference and Commute Time",
+       x = "Commute Time (minutes)",
+       y = "Public Transit Preference Rating (1-7)") +
+  theme_minimal()
+print(p_rq3_time_basic)
+# Multiple linear regression
+# H0 (overall F-test): beta_time = beta_cost = beta_distance = 0
+rq3_model <- lm(transit_preference_1to7 ~ commute_time_min +
+              commute_cost_cad + commute_distance_km,
+            data = analysis_data)
+# Check assumptions and diagnostic plots, then report.
+print(performance::check_model(
+  rq3_model, check = c("qq", "normality", "linearity", "homogeneity")
+))
+print(performance::check_collinearity(rq3_model))
+print(summary(rq3_model))
+report::report(rq3_model)
+```
+
+## Appendix: R Code
+
+```{r appendix, ref.label=c("setup", "checks", "commuting", "ratings", "frequencies", "figures", "mode-comparison", "statistical-analysis"), eval=FALSE, echo=TRUE}
+```
