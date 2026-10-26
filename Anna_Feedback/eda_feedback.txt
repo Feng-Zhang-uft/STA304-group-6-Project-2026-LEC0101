@@ -1,0 +1,34 @@
+STA304 Exploratory Data Analysis Feedback
+
+Disclaimer: in the process of constructing feedback, I recorded my audio and got AI to rephrase my feedback in a concise, clear manner so that I can mark faster + you get more detailed feedback. I did not run any of the assignments through AI.
+
+Interpretation of the ordinal scale
+
+You note that the items use ordinal scores from 1 to 7 and that numerical summaries do not establish equal spacing between categories. I can see the idea behind it. A scale from strongly disagree to strongly agree is subjective, so the gaps between points may not feel equal to every respondent. For a 1 to 7 scale like this one, though, it is reasonable to think about the spacing between scores, and the sentence is not relevant to your analysis. It is also unclear what you mean by it, so it is more likely to confuse the reader than help. This sentence can be cut.
+
+Figure 4 and the .qmd file
+
+I rendered your .qmd file, and Figure 4 in your PDF does not match anything it produces. The plot exists in the PDF, but no code in the .qmd generates it, and the report does not say where it came from. The instructions asked for the code to appear in the appendix and for the .qmd to serve as proof of how the report was written. A figure that comes from outside that code breaks both. If you made Figure 4 separately, the report needs to say so and the code needs to be included.
+
+Checking model assumptions
+
+You show the plots from check_model in the performance package but never say whether the assumptions hold. After the plots, state what you see for normality of the residuals and for homogeneity of variance, and say whether either is violated.
+
+Statistical test section
+
+The statistical test section is wordy, especially the paragraph after the plot that checks the assumptions. Break it into shorter paragraphs.
+
+Your model results are the raw report::report output, with one sentence per predictor giving the coefficient, confidence interval, t statistic, p-value, and standardized coefficient. With three predictors this is hard to read. A table works better, with one row per predictor and columns for the coefficient, 95% confidence interval, and p-value, followed by a short sentence on the direction of each significant effect. The formula should also be written as an equation, such as $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3 + \epsilon$, with each coefficient tied to its predictor.
+
+Your LaTeX is also inconsistent. R^2 is formatted correctly in one place and shows up as plain R2 later. Format the fit statistics the same way throughout, so $R^2$ and adjusted $R^2$ appear in math mode.
+
+Grade breakdown
+
+Checking Model Assumptions (0.3 / 0.4)
+Interpretation of whether the assumptions were violated (0 / 0.1). I deducted 0.1 because the report shows the check_model plots but does not say whether the assumptions hold.
+
+Formatting & Submission (0.1 / 0.2)
+LaTeX, easystats package, code in the appendix (0.05 / 0.1). I deducted 0.05 because Figure 4 is not produced by the code in the report, so the code for it is not in the appendix.
+Both the .pdf and the .tex or .qmd submitted (0.05 / 0.1). I deducted 0.05 because the .qmd does not reproduce Figure 4 from the .pdf, so it does not fully serve as proof of how the report was made.
+
+Total (1.8 / 2)
