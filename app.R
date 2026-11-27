@@ -13,7 +13,7 @@ commute_labels <- c(
 
 rating_label <- "Public transit preference score (1–7)"
 
-group_names <- c("Travel Modes", "One-Way Commute Details", "Travel Preferences and Priorities")
+group_names <- c("Travel Modes","Travel Preferences and Priorities", "One-Way Commute Details")
 views <- c("Preferred mode" = "preferred_mode", "Current mode" = "current_mode",
            "Preferred vs. Current" = "comparison")
 stopifnot(all(c("preferred_mode", "current_mode", "vehicle_access") %in% names(survey)))
@@ -215,8 +215,8 @@ ui <- fluidPage(
           style = "margin-bottom: 22px;",
           h2("Main Takeaway"),
           p(paste(
-            "Driving was the most popular choice among respondents, but most of",
-            "them actually used public transit to get to campus."
+            "Driving was the most preferred mode (37.3%) among respondents, followed by public transit (28.4%). Respondents with access to a private vehicle gave public transit a lower average preference score than those without access (2.86 vs. 4.35 on a 1–7 scale). 
+"
           ))
         ),
         
@@ -225,11 +225,7 @@ ui <- fluidPage(
           h2("Commute factors show different patterns"),
           p(paste(
             "Students without access to a private vehicle generally preferred",
-            "public transit more. We also looked at travel time, distance and",
-            "cost together. Longer travel times went with a stronger preference",
-            "for transit. For distance, we saw the opposite pattern: students",
-            "travelling farther tended to prefer transit less. There was no",
-            "clear link with travel cost."
+            "public transit more. After accounting for these commute factors, longer travel times were associated to higher transit preference scores, while longer distances were linked to lower scores. The survey showed no clear relationship between travel cost and public transit preference after accounting for travel time and distance."
           ))
         ),
         

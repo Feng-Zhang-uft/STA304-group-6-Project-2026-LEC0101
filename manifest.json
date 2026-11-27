@@ -1642,13 +1642,16 @@
   },
   "files": {
     "app.R": {
-      "checksum": "b409bc664639b1fcb086376d2d15607f"
+      "checksum": "ebb9502d4d2dd673f3157cc65dac5797"
+    },
+    "Group6_app.R": {
+      "checksum": "ebb9502d4d2dd673f3157cc65dac5797"
     },
     "STA304_Group6_Data_Cleaned.xlsx": {
       "checksum": "54763cef5f7b9f79db76b640a3d14ad8"
     },
-    "Web304(3).R": {
-      "checksum": "8d4ba10da280e370827405131eebed6c"
+    "Web304(4).R": {
+      "checksum": "82cc2c7df2690a763bec89c7884ad629"
     }
   },
   "users": null
